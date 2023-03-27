@@ -7,6 +7,7 @@ import "codemirror/theme/material.css";
 import "codemirror/addon/scroll/simplescrollbars.css";
 
 import "../styles/y-codemirror.css";
+import "../styles/sketch.css"
 
 export default function CustomApp({ Component, pageProps }) {
   return <Component {...pageProps} />;
