@@ -19,7 +19,6 @@ import { webTargets } from "flok-core";
 //import Sketch from "react-p5";
 import p5Types from "p5";
 import loadable from '@loadable/component';
-import {drawSetup, drawDraw} from './draw-to-dweet.js';
 
 const defaultLayoutList = ["strudel", "strudel"];
 
@@ -430,24 +429,13 @@ class SessionPage extends Component<Props, State> {
 
     let x = 10;
     let y = 10;
-
-    // const setup = (p5: p5Types, canvasParentRef: Element) => {
-    //   p5.createCanvas(140, 140).parent(canvasParentRef);
-    // };
-
-    // const draw = (p5: p5Types) => {
-    //   p5.background(128);
-    //   //p5.fill(255, 204, 0);
-    //   p5.ellipse(x, y, 70, 70);
-    //   x++;
-    // };
     
-    function MySketch(name: string) {
+    const MySketch = ({name: string}) => {
       if (typeof window !== 'undefined') {
-        const Sketch = loadable(() => import('react-p5'));
+          const Draw = loadable(() => import('./draw-to-dweet.js'));
+          console.log(Draw);
         //const {setup, draw} = loadable(() => import('./draw-to-dweet.js'));
-        console.log(drawSetup);
-        return <Sketch setup={drawSetup} draw={drawDraw}/>
+        return <Draw />
       } else {
         return null;
       }
@@ -464,11 +452,11 @@ class SessionPage extends Component<Props, State> {
           <>
             <div className='sketches'>
               <div className='sketch'>
-                <MySketch />
+                <MySketch name="kate" />
                 kate
               </div>
               <div className='sketch'>
-                <MySketch />
+                <MySketch name="alex" />
                 alex
               </div>
             </div>
