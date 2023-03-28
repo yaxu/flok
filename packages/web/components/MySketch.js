@@ -1,28 +1,30 @@
 import React from "react";
 import Sketch from "react-p5";
 
-const MySketch = (props) => {
-  var prev = -1;
-  var sz = 200.0;
-  const ps = [];
+const globals = {};
+const sz = 200.0;
 
+const MySketch = (props) => {
   const setup = (p5, parent) => {
     console.log("props:");
     console.log(props);
     if (!window.drawings) {
       window.drawings = {};
     }
-    window.drawings[props.name] = ps;
+
+    globals[props.name] = { prev: -1, ps: [] };
+    window.drawings[props.name] = globals[props.name].ps;
 
     p5.createCanvas(sz, sz).parent(parent);
     for (var i = 0; i < p5.width; ++i) {
-      ps.push(0.5);
+      globals[props.name].ps.push(0.5);
     }
 
     console.log(p5);
   };
 
   const draw = (p5) => {
+    const ps = globals[props.name].ps;
     p5.background(255);
     p5.fill(128);
     p5.rect(1, 1, 198, 198);
@@ -54,7 +56,8 @@ const MySketch = (props) => {
   const mouseDragged = (p5, e) => {
     const mouseX = p5.mouseX;
     const mouseY = p5.mouseY;
-
+    const ps = globals[props.name].ps;
+    const prev = globals[props.name].prev;
     if (!inside(p5)) {
       return;
     }
@@ -86,11 +89,12 @@ const MySketch = (props) => {
       }
     }
     ps[mouseX] = mouseY / sz;
-    prev = mouseX;
+    globals[props.name].prev = mouseX;
     //st.html("");
   };
 
   const mouseClicked = (p5, e) => {
+    const ps = globals[props.name].ps;
     if (!inside(p5)) {
       return;
     }
@@ -98,7 +102,7 @@ const MySketch = (props) => {
       return;
     }
     ps[p5.mouseX] = p5.mouseY / sz;
-    prev = p5.mouseX;
+    globals[props.name].prev = p5.mouseX;
     //st.html("");
   };
 

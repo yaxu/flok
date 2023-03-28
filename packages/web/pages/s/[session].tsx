@@ -16,9 +16,10 @@ import TextInput from "../../components/TextInput";
 import Button from "../../components/Button";
 import Checkbox from "../../components/Checkbox";
 import { webTargets } from "flok-core";
-//import Sketch from "react-p5";
 import p5Types from "p5";
-import loadable from "@loadable/component";
+import dynamic from "next/dynamic";
+
+const Draw = dynamic(() => import("../../components/MySketch"), { ssr: false });
 
 const defaultLayoutList = ["strudel", "strudel"];
 
@@ -429,16 +430,6 @@ class SessionPage extends Component<Props, State> {
     let x = 10;
     let y = 10;
 
-    const MySketch = (props) => {
-      if (typeof window !== "undefined") {
-        const Draw = loadable(() => import("./draw-to-dweet.js"));
-        //const {setup, draw} = loadable(() => import('./draw-to-dweet.js'));
-        return <Draw name={props.name} />;
-      } else {
-        return null;
-      }
-    };
-
     return (
       <Layout backgroundOpacity={backgroundOpacity}>
         <Head>
@@ -450,11 +441,11 @@ class SessionPage extends Component<Props, State> {
           <>
             <div className="sketches">
               <div className="sketch">
-                <MySketch name="kate" />
+                <Draw name="kate" />
                 kate
               </div>
               <div className="sketch">
-                <MySketch name="alex" />
+                <Draw name="alex" />
                 alex
               </div>
             </div>
