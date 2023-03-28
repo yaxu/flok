@@ -32,24 +32,28 @@ const MySketch = (props) => {
   };
 
   const draw = (p5) => {
-    p5.background(255);
-    p5.fill(128);
-    p5.rect(1, 1, 198, 198);
-
-    var prevx = -1;
-    var prevy = -1;
-
-    for (var x = 0; x < p5.width; ++x) {
-      if (yarray.get(x) == -1) {
-        continue;
+    ydoc.transact(() => {    
+      p5.background(255);
+      p5.fill(128);
+      p5.rect(1, 1, 198, 198);
+      const ps = yarray.toArray();
+      
+      var prevx = -1;
+      var prevy = -1;
+      
+      for (var x = 0; x < p5.width; ++x) {
+        if (ps[x] == -1) {
+          continue;
+        }
+        if (prevx >= 0) {
+          p5.line(prevx, prevy * sz, x, ps[x] * sz);
+        }
+        prevx = x;
+        prevy = ps[x];
       }
-      if (prevx >= 0) {
-        p5.line(prevx, prevy * sz, x, yarray.get(x) * sz);
-      }
-      prevx = x;
-      prevy = yarray.get(x);
-    }
-  };
+    })
+  }
+                 
 
   const inside = (p5) => {
     return (
