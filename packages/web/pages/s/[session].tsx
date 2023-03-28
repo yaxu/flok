@@ -17,9 +17,6 @@ import Button from "../../components/Button";
 import Checkbox from "../../components/Checkbox";
 import { webTargets } from "flok-core";
 import p5Types from "p5";
-import dynamic from "next/dynamic";
-
-const Draw = dynamic(() => import("../../components/MySketch"), { ssr: false });
 
 const defaultLayoutList = ["strudel", "strudel"];
 
@@ -439,16 +436,6 @@ class SessionPage extends Component<Props, State> {
           <LoadingSpinner />
         ) : username || readonly ? (
           <>
-            <div className="sketches">
-              <div className="sketch">
-                <Draw name="kate" />
-                kate
-              </div>
-              <div className="sketch">
-                <Draw name="alex" />
-                alex
-              </div>
-            </div>
             <Session
               websocketsHost={host || location.host}
               sessionName={session}

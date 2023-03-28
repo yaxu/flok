@@ -5,26 +5,33 @@ const globals = {};
 const sz = 200.0;
 
 const MySketch = (props) => {
+  const {sessionClient, name} = props;
+  const ydoc = sessionClient._doc;
+  const yarray = ydoc.getArray(name)
+  window.yarray = yarray
+  
   const setup = (p5, parent) => {
-    console.log("props:");
-    console.log(props);
     if (!window.drawings) {
       window.drawings = {};
     }
 
-    globals[props.name] = { prev: -1, ps: [] };
+    globals[props.name] = { prev: -1};
+    
     window.drawings[props.name] = globals[props.name].ps;
 
     p5.createCanvas(sz, sz).parent(parent);
-    for (var i = 0; i < p5.width; ++i) {
-      globals[props.name].ps.push(0.5);
+
+    while(yarray.length < 200) {
+      yarray.insert(0, [0.5])
     }
 
-    console.log(p5);
+    //for (var i = 0; i < p5.width; ++i) {
+    //globals[props.name].ps.push(0.5);
+    //}
+
   };
 
   const draw = (p5) => {
-    const ps = globals[props.name].ps;
     p5.background(255);
     p5.fill(128);
     p5.rect(1, 1, 198, 198);
@@ -33,14 +40,14 @@ const MySketch = (props) => {
     var prevy = -1;
 
     for (var x = 0; x < p5.width; ++x) {
-      if (ps[x] == -1) {
+      if (yarray.get(x) == -1) {
         continue;
       }
       if (prevx >= 0) {
-        p5.line(prevx, prevy * sz, x, ps[x] * sz);
+        p5.line(prevx, prevy * sz, x, yarray.get(x) * sz);
       }
       prevx = x;
-      prevy = ps[x];
+      prevy = yarray.get(x);
     }
   };
 
@@ -56,7 +63,6 @@ const MySketch = (props) => {
   const mouseDragged = (p5, e) => {
     const mouseX = p5.mouseX;
     const mouseY = p5.mouseY;
-    const ps = globals[props.name].ps;
     const prev = globals[props.name].prev;
     if (!inside(p5)) {
       return;
@@ -67,7 +73,7 @@ const MySketch = (props) => {
     }
     const v = mouseY / sz;
     if (prev >= 0) {
-      const prevV = ps[prev];
+      const prevV = yarray.get(prev);
       var diff = prevV - v;
 
       var start, stop;
@@ -82,26 +88,29 @@ const MySketch = (props) => {
 
       for (var x = start + 1; x < stop; ++x) {
         if (prev > mouseX) {
-          ps[x] = v + diff * ((x - start) / dist);
+          yarray.delete(x, 1)
+          yarray.insert(x, [v + diff * ((x - start) / dist)]);
         } else {
-          ps[x] = v + diff * (1 - (x - start) / dist);
+          yarray.delete(x, 1)
+          yarray.insert(x, [v + diff * (1 - (x - start) / dist)]);
         }
       }
     }
-    ps[mouseX] = mouseY / sz;
+    yarray.delete(mouseX, 1)
+    yarray.insert(mouseX, [mouseY / sz]);
     globals[props.name].prev = mouseX;
     //st.html("");
   };
 
   const mouseClicked = (p5, e) => {
-    const ps = globals[props.name].ps;
     if (!inside(p5)) {
       return;
     }
     if (p5.mouseY >= sz) {
       return;
     }
-    ps[p5.mouseX] = p5.mouseY / sz;
+    yarray.delete(p5.mouseX)
+    yarray.insert(p5.mouseX, [p5.mouseY / sz]);
     globals[props.name].prev = p5.mouseX;
     //st.html("");
   };
