@@ -1,7 +1,7 @@
 import React from "react";
 import Sketch from "react-p5";
 
-export default (props) => {
+const MySketch = (props) => {
   var prev = -1;
   var sz = 200.0;
   const ps = [];
@@ -111,3 +111,6 @@ export default (props) => {
     />
   );
 };
+
+MySketch.displayName = "MySketch";
+export default MySketch;
