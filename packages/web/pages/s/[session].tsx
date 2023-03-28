@@ -18,7 +18,7 @@ import Checkbox from "../../components/Checkbox";
 import { webTargets } from "flok-core";
 //import Sketch from "react-p5";
 import p5Types from "p5";
-import loadable from '@loadable/component';
+import loadable from "@loadable/component";
 
 const defaultLayoutList = ["strudel", "strudel"];
 
@@ -326,7 +326,6 @@ class SessionPage extends Component<Props, State> {
       ...this.state,
       hasWebGl: hasWebgl(),
     };
-
   }
 
   async componentDidMount() {
@@ -341,7 +340,9 @@ class SessionPage extends Component<Props, State> {
     // Initialize Strudel
     if (layoutList.includes("strudel")) {
       console.log("Create StrudelWrapper and import Strudel");
-      const { default: StrudelWrapper } = await import("../../lib/StrudelWrapper")
+      const { default: StrudelWrapper } = await import(
+        "../../lib/StrudelWrapper"
+      );
       this.strudel = new StrudelWrapper(this.handleHydraError);
       await this.strudel.importModules();
     }
@@ -408,8 +409,6 @@ class SessionPage extends Component<Props, State> {
     return layoutList;
   };
 
-
-                                
   render() {
     const { host, session, readonly, noLocalEval, noHydra, backgroundOpacity } =
       this.props;
@@ -429,18 +428,17 @@ class SessionPage extends Component<Props, State> {
 
     let x = 10;
     let y = 10;
-    
-    const MySketch = ({name: string}) => {
-      if (typeof window !== 'undefined') {
-          const Draw = loadable(() => import('./draw-to-dweet.js'));
-          console.log(Draw);
+
+    const MySketch = (props) => {
+      if (typeof window !== "undefined") {
+        const Draw = loadable(() => import("./draw-to-dweet.js"));
         //const {setup, draw} = loadable(() => import('./draw-to-dweet.js'));
-        return <Draw />
+        return <Draw name={props.name} />;
       } else {
         return null;
       }
-    }
-    
+    };
+
     return (
       <Layout backgroundOpacity={backgroundOpacity}>
         <Head>
@@ -450,12 +448,12 @@ class SessionPage extends Component<Props, State> {
           <LoadingSpinner />
         ) : username || readonly ? (
           <>
-            <div className='sketches'>
-              <div className='sketch'>
+            <div className="sketches">
+              <div className="sketch">
                 <MySketch name="kate" />
                 kate
               </div>
-              <div className='sketch'>
+              <div className="sketch">
                 <MySketch name="alex" />
                 alex
               </div>
@@ -474,21 +472,18 @@ class SessionPage extends Component<Props, State> {
           </>
         ) : (
           <>
-          <EmptySession
-            websocketsUrl={websocketsUrl}
-            session={session}
-            lastUsername={lastUsername}
-            onSubmit={this.handleJoinSubmit}
-            hasHydraSlot={hasHydraSlot}
-            hasWebGl={hasWebGl}
-            layout={layoutList}
-          />
-            </>
-        )}
-        {hasWebgl && !noHydra && (
-          <>
+            <EmptySession
+              websocketsUrl={websocketsUrl}
+              session={session}
+              lastUsername={lastUsername}
+              onSubmit={this.handleJoinSubmit}
+              hasHydraSlot={hasHydraSlot}
+              hasWebGl={hasWebGl}
+              layout={layoutList}
+            />
           </>
         )}
+        {hasWebgl && !noHydra && <></>}
       </Layout>
     );
   }
