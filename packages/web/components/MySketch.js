@@ -5,55 +5,56 @@ const globals = {};
 const sz = 200.0;
 
 const MySketch = (props) => {
-  const {sessionClient, name} = props;
+  const { sessionClient, name } = props;
   const ydoc = sessionClient._doc;
-  const yarray = ydoc.getArray(name)
-  window.yarray = yarray
-  
+  const yarray = ydoc.getArray(name);
+
   const setup = (p5, parent) => {
+    p5.frameRate(25);
     if (!window.drawings) {
       window.drawings = {};
     }
-
-    globals[props.name] = { prev: -1};
-    
-    window.drawings[props.name] = globals[props.name].ps;
-
+    const ps = [];
+    globals[props.name] = { prev: -1, ps: ps, changed: true };
+    window[props.name] = pure(ps).fmap(sequence).innerJoin();
     p5.createCanvas(sz, sz).parent(parent);
 
-    while(yarray.length < 200) {
-      yarray.insert(0, [0.5])
+    while (yarray.length < 200) {
+      yarray.insert(0, [0.5]);
     }
+    yarray.observe((ev) => {
+      globals[props.name].changed = true;
+    });
 
     //for (var i = 0; i < p5.width; ++i) {
     //globals[props.name].ps.push(0.5);
     //}
-
   };
 
   const draw = (p5) => {
-    ydoc.transact(() => {    
-      p5.background(255);
-      p5.fill(128);
-      p5.rect(1, 1, 198, 198);
-      const ps = yarray.toArray();
-      
-      var prevx = -1;
-      var prevy = -1;
-      
-      for (var x = 0; x < p5.width; ++x) {
-        if (ps[x] == -1) {
-          continue;
-        }
-        if (prevx >= 0) {
-          p5.line(prevx, prevy * sz, x, ps[x] * sz);
-        }
-        prevx = x;
-        prevy = ps[x];
+    if (!globals[props.name].changed) {
+      return;
+    }
+    p5.background(255);
+    p5.fill(128);
+    p5.rect(1, 1, 198, 198);
+    const ps = yarray.toArray();
+
+    var prevx = -1;
+    var prevy = -1;
+
+    for (var x = 0; x < p5.width; ++x) {
+      if (ps[x] == -1) {
+        continue;
       }
-    })
-  }
-                 
+      if (prevx >= 0) {
+        p5.line(prevx, prevy * sz, x, ps[x] * sz);
+      }
+      prevx = x;
+      prevy = ps[x];
+    }
+    globals[props.name].changed = false;
+  };
 
   const inside = (p5) => {
     return (
@@ -62,6 +63,14 @@ const MySketch = (props) => {
       p5.mouseY >= 0 &&
       p5.mouseY < p5.height
     );
+  };
+
+  const updateGlobal = () => {
+    for (var i = 0; i < sz; i++) {
+      globals[props.name].ps[i] = yarray.get(i);
+    }
+    console.log(globals[props.name].ps);
+    globals[props.name].changed = true;
   };
 
   const mouseDragged = (p5, e) => {
@@ -92,18 +101,18 @@ const MySketch = (props) => {
 
       for (var x = start + 1; x < stop; ++x) {
         if (prev > mouseX) {
-          yarray.delete(x, 1)
+          yarray.delete(x, 1);
           yarray.insert(x, [v + diff * ((x - start) / dist)]);
         } else {
-          yarray.delete(x, 1)
+          yarray.delete(x, 1);
           yarray.insert(x, [v + diff * (1 - (x - start) / dist)]);
         }
       }
     }
-    yarray.delete(mouseX, 1)
+    yarray.delete(mouseX, 1);
     yarray.insert(mouseX, [mouseY / sz]);
     globals[props.name].prev = mouseX;
-    //st.html("");
+    updateGlobal();
   };
 
   const mouseClicked = (p5, e) => {
@@ -113,10 +122,10 @@ const MySketch = (props) => {
     if (p5.mouseY >= sz) {
       return;
     }
-    yarray.delete(p5.mouseX)
+    yarray.delete(p5.mouseX);
     yarray.insert(p5.mouseX, [p5.mouseY / sz]);
     globals[props.name].prev = p5.mouseX;
-    //st.html("");
+    updateGlobal();
   };
 
   return (
