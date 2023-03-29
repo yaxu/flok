@@ -69,7 +69,6 @@ const MySketch = (props) => {
     for (var i = 0; i < sz; i++) {
       globals[props.name].ps[i] = yarray.get(i);
     }
-    console.log(globals[props.name].ps);
     globals[props.name].changed = true;
   };
 
