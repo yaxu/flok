@@ -64,7 +64,7 @@ class Server {
     const { host, port, isDevelopment, secure, staticDir } = ctx;
 
     this.host = host || "0.0.0.0";
-    this.port = port || 3000;
+    this.port = port || 3030;
     this.isDevelopment = isDevelopment || false;
     this.secure = secure || false;
     this.staticDir = staticDir;
