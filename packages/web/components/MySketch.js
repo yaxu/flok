@@ -16,7 +16,7 @@ const MySketch = (props) => {
     }
     const ps = [];
     globals[props.name] = { prev: -1, ps: ps, changed: true };
-    window[props.name] = pure(ps).fmap(sequence).innerJoin();
+    window[props.name] = pure(ps).fmap(sequence).innerJoin().mul(2).sub(1);
     p5.createCanvas(sz, sz).parent(parent);
 
     while (yarray.length < 200) {
