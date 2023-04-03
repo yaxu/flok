@@ -5,29 +5,40 @@ const globals = {};
 const sz = 200.0;
 
 const MySketch = (props) => {
+  const { sessionClient, name } = props;
+  const ydoc = sessionClient._doc;
+  const yarray = ydoc.getArray(name);
+
   const setup = (p5, parent) => {
-    console.log("props:");
-    console.log(props);
+    p5.frameRate(25);
     if (!window.drawings) {
       window.drawings = {};
     }
-
-    globals[props.name] = { prev: -1, ps: [] };
-    window.drawings[props.name] = globals[props.name].ps;
-
+    const ps = [];
+    globals[props.name] = { prev: -1, ps: ps, changed: true };
+    window[props.name] = pure(ps).fmap(sequence).innerJoin().mul(2).sub(1);
     p5.createCanvas(sz, sz).parent(parent);
-    for (var i = 0; i < p5.width; ++i) {
-      globals[props.name].ps.push(0.5);
-    }
 
-    console.log(p5);
+    while (yarray.length < 200) {
+      yarray.insert(0, [0.5]);
+    }
+    yarray.observe((ev) => {
+      globals[props.name].changed = true;
+    });
+
+    //for (var i = 0; i < p5.width; ++i) {
+    //globals[props.name].ps.push(0.5);
+    //}
   };
 
   const draw = (p5) => {
-    const ps = globals[props.name].ps;
+    if (!globals[props.name].changed) {
+      return;
+    }
     p5.background(255);
     p5.fill(128);
     p5.rect(1, 1, 198, 198);
+    const ps = yarray.toArray();
 
     var prevx = -1;
     var prevy = -1;
@@ -42,6 +53,7 @@ const MySketch = (props) => {
       prevx = x;
       prevy = ps[x];
     }
+    globals[props.name].changed = false;
   };
 
   const inside = (p5) => {
@@ -53,10 +65,16 @@ const MySketch = (props) => {
     );
   };
 
+  const updateGlobal = () => {
+    for (var i = 0; i < sz; i++) {
+      globals[props.name].ps[i] = yarray.get(i);
+    }
+    globals[props.name].changed = true;
+  };
+
   const mouseDragged = (p5, e) => {
     const mouseX = p5.mouseX;
     const mouseY = p5.mouseY;
-    const ps = globals[props.name].ps;
     const prev = globals[props.name].prev;
     if (!inside(p5)) {
       return;
@@ -67,7 +85,7 @@ const MySketch = (props) => {
     }
     const v = mouseY / sz;
     if (prev >= 0) {
-      const prevV = ps[prev];
+      const prevV = yarray.get(prev);
       var diff = prevV - v;
 
       var start, stop;
@@ -82,28 +100,31 @@ const MySketch = (props) => {
 
       for (var x = start + 1; x < stop; ++x) {
         if (prev > mouseX) {
-          ps[x] = v + diff * ((x - start) / dist);
+          yarray.delete(x, 1);
+          yarray.insert(x, [v + diff * ((x - start) / dist)]);
         } else {
-          ps[x] = v + diff * (1 - (x - start) / dist);
+          yarray.delete(x, 1);
+          yarray.insert(x, [v + diff * (1 - (x - start) / dist)]);
         }
       }
     }
-    ps[mouseX] = mouseY / sz;
+    yarray.delete(mouseX, 1);
+    yarray.insert(mouseX, [mouseY / sz]);
     globals[props.name].prev = mouseX;
-    //st.html("");
+    updateGlobal();
   };
 
   const mouseClicked = (p5, e) => {
-    const ps = globals[props.name].ps;
     if (!inside(p5)) {
       return;
     }
     if (p5.mouseY >= sz) {
       return;
     }
-    ps[p5.mouseX] = p5.mouseY / sz;
+    yarray.delete(p5.mouseX);
+    yarray.insert(p5.mouseX, [p5.mouseY / sz]);
     globals[props.name].prev = p5.mouseX;
-    //st.html("");
+    updateGlobal();
   };
 
   return (
