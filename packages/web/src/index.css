@@ -17,3 +17,12 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgb(51 65 85) !important;
 }
+
+.sketches {
+  display: flex;
+  flex-direction: row;
+}
+
+.sketch {
+  margin: 10px;
+}
