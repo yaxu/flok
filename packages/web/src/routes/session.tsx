@@ -23,6 +23,11 @@ import { defaultTarget, webTargets } from "@/settings.json";
 import { panicCodes as panicCodesUntyped } from "@/settings.json";
 import { ReplsDialog } from "@/components/repls-dialog";
 
+//import dynamic from "next/dynamic";
+import Draw from "../components/MySketch";
+
+//const Draw = dynamic(() => import("./MySketch"), { ssr: false });
+
 const panicCodes = panicCodesUntyped as { [target: string]: string };
 
 interface SessionLoaderParams {
@@ -270,7 +275,19 @@ export default function SessionPage() {
           onOpenChange={(isOpen) => setReplsDialogOpen(isOpen)}
         />
       )}
-      <Mosaic
+      {session && (
+            <div className="sketches">
+              <div className="sketch">
+                <Draw name="kate" session={session} />
+                kate
+              </div>
+              <div className="sketch">
+                <Draw name="alex" session={session} />
+                alex
+              </div>
+              </div>
+      )}
+        <Mosaic
         items={documents.map((doc, i) => (
           <Pane key={doc.id}>
             <TargetSelect
