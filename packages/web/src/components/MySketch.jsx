@@ -1,5 +1,6 @@
 import React from "react";
 import Sketch from "react-p5";
+import {pure, sequence} from "@strudel.cycles/core";
 
 const globals = {};
 const sz = 200.0;
@@ -8,7 +9,6 @@ const Draw = (props) => {
   const { session, name } = props;
   const ydoc = session.yDoc;
   const yarray = ydoc.getArray(name);
-
   const setup = (p5, parent) => {
     p5.frameRate(25);
     if (!window.drawings) {
@@ -18,7 +18,6 @@ const Draw = (props) => {
     globals[props.name] = { prev: -1, ps: ps, changed: true };
     window[props.name] = pure(ps).fmap(sequence).innerJoin().mul(2).sub(1);
     p5.createCanvas(sz, sz).parent(parent);
-
     while (yarray.length < 200) {
       yarray.insert(0, [0.5]);
     }
