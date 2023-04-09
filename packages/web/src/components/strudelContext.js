@@ -112,3 +112,6 @@ window.patternMove = (pat) => inhabit(moves, pat);
 for (var key in window.moves) {
   window[key] = window.moves[key];
 }
+
+export { }
+
