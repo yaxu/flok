@@ -52,6 +52,7 @@ const Draw = (props) => {
       prevx = x;
       prevy = ps[x];
     }
+    updateGlobal();
     globals[props.name].changed = false;
   };
 
