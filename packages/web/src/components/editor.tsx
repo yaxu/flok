@@ -13,6 +13,7 @@ import {
   langByTarget as langByTargetUntyped,
   targetsWithDocumentEvalMode,
   panicCodes as panicCodesUntyped,
+  webTargets,
 } from "@/settings.json";
 
 const defaultLanguage = "javascript";
@@ -27,20 +28,19 @@ const panicCodes = panicCodesUntyped as { [target: string]: string };
 const baseTheme = EditorView.baseTheme({
   "&.cm-editor": {
     background: "transparent",
+    fontFamily: `Inconsolata`,
     fontSize: "16px",
     color: "white",
-    fontFamily: `Inconsolata`,
     fontWeight: 600,
   },
   "& .cm-scroller": {
     fontFamily: `Inconsolata`,
-    overflow: "auto",
-    minHeight: "100vh",
     paddingLeft: "2px !important",
+    minHeight: "100vh",
   },
   "& .cm-line": {
-    maxWidth: "fit-content",
     background: "rgba(0, 0, 0, 0.7)",
+    maxWidth: "fit-content",
     padding: 0,
   },
   "& .cm-activeLine": {
@@ -70,23 +70,22 @@ const baseTheme = EditorView.baseTheme({
 });
 
 const panicKeymap = (doc: Document, keys: string[] = ["Cmd-.", "Ctrl-."]) => {
-  const panicCode: string | null = panicCodes[doc.target];
+  const panicCode = panicCodes[doc.target];
 
-  return (
-    panicCode &&
-    keymap.of([
-      ...keys.map((key) => ({
-        key,
-        run() {
-          doc.evaluate(panicCode, { from: 0, to: 0 });
-          return true;
-        },
-      })),
-    ])
-  );
+  return panicCode
+    ? keymap.of([
+        ...keys.map((key) => ({
+          key,
+          run() {
+            doc.evaluate(panicCode, { from: null, to: null });
+            return true;
+          },
+        })),
+      ])
+    : [];
 };
 
-interface IEditorProps extends ReactCodeMirrorProps {
+export interface EditorProps extends ReactCodeMirrorProps {
   document?: Document;
 }
 
@@ -96,17 +95,18 @@ const flokSetup = (doc: Document) => {
   const defaultMode = targetsWithDocumentEvalMode.includes(doc.target)
     ? "document"
     : "block";
+  const web = webTargets.includes(doc.target);
 
   return [
     flashField(),
     remoteEvalFlash(doc),
-    Prec.high(evalKeymap(doc, { defaultMode })),
+    Prec.high(evalKeymap(doc, { defaultMode, web })),
     panicKeymap(doc),
     yCollab(text, doc.session.awareness, { undoManager, showLocalCaret: true }),
   ];
 };
 
-function Editor({ document, ...props }: IEditorProps) {
+function Editor({ document, ...props }: EditorProps) {
   const [mounted, setMounted] = useState(false);
 
   const themeName = "dark";
@@ -127,12 +127,7 @@ function Editor({ document, ...props }: IEditorProps) {
     <CodeMirror
       value={document.content}
       theme={themeName}
-      extensions={[
-        baseTheme,
-        EditorView.lineWrapping,
-        flokSetup(document),
-        languageExtension(),
-      ]}
+      extensions={[baseTheme, flokSetup(document), languageExtension()]}
       basicSetup={{
         foldGutter: false,
         lineNumbers: false,

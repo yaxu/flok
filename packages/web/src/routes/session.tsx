@@ -1,6 +1,5 @@
-import Editor from "@/components/editor";
-import Mosaic from "@/components/mosaic";
-import Pane from "@/components/pane";
+import { Mosaic } from "@/components/mosaic";
+import { Pane } from "@/components/pane";
 import SessionCommandDialog from "@/components/session-command-dialog";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
@@ -10,18 +9,18 @@ import { Session, Document } from "@flok-editor/session";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useLoaderData } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
-import ConfigureDialog from "@/components/configure-dialog";
-import TargetSelect from "@/components/target-select";
+import { ConfigureDialog } from "@/components/configure-dialog";
 import { CommandsButton } from "@/components/commands-button";
 import { ReplsButton } from "@/components/repls-button";
 import { Helmet } from "react-helmet-async";
 import { isWebglSupported } from "@/lib/webgl-detector";
-import HydraCanvas from "@/components/hydra-canvas";
-import type { HydraWrapper } from "@/lib/hydra-wrapper";
-import type { StrudelWrapper } from "@/lib/strudel-wrapper";
 import { defaultTarget, webTargets } from "@/settings.json";
 import { panicCodes as panicCodesUntyped } from "@/settings.json";
 import { ReplsDialog } from "@/components/repls-dialog";
+import { useShortcut } from "@/hooks/use-shortcut";
+import { useStrudel } from "@/hooks/use-strudel";
+import { useHydra } from "@/hooks/use-hydra";
+import HydraCanvas from "@/components/hydra-canvas";
 
 //import dynamic from "next/dynamic";
 import Draw from "../components/MySketch";
@@ -53,11 +52,6 @@ export default function SessionPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
 
   const hasWebGl = useMemo(() => isWebglSupported(), []);
-
-  const [hydra, setHydra] = useState<HydraWrapper | null>(null);
-  const hydraCanvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  const [strudel, setStrudel] = useState<StrudelWrapper | null>(null);
 
   const { toast } = useToast();
 
@@ -116,68 +110,17 @@ export default function SessionPage() {
     return () => newSession.destroy();
   }, [name]);
 
+  // Show a warning if WebGL is not enabled
   useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "j" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setCommandsDialogOpen((open) => !open);
-      }
-    };
+    if (!session || hasWebGl) return;
 
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
-  }, []);
-
-  // Load and initialize external libraries: Strudel, Hydra
-  useEffect(() => {
-    if (!session) return;
-
-    if (!strudel) {
-      (async () => {
-        console.log("Create StrudelWrapper");
-        const { StrudelWrapper } = await import("@/lib/strudel-wrapper");
-
-        const strudel = new StrudelWrapper({ onError: handleHydraError });
-        setStrudel(strudel);
-
-        console.log("Import Strudel modules");
-        await strudel.importModules();
-
-        session.on("eval:strudel", ({ body }) => {
-          console.log("eval strudel", body);
-          strudel.tryEval(body);
-        });
-      })();
-    }
-
-    if (!hydra && hasWebGl && hydraCanvasRef.current) {
-      (async () => {
-        console.log("Create HydraWrapper");
-        const { HydraWrapper } = await import("@/lib/hydra-wrapper");
-
-        const hydra = new HydraWrapper({
-          canvas: hydraCanvasRef.current!,
-          onError: handleHydraError,
-        });
-        setHydra(hydra);
-
-        session.on("eval:hydra", ({ body }) => {
-          console.log("eval hydra", body);
-          hydra.tryEval(body);
-        });
-      })();
-    }
-  }, [session, hydraCanvasRef, hydra, strudel]);
-
-  useEffect(() => {
-    if (hasWebGl) return;
     toast({
       variant: "warning",
       title: "WebGL not available",
       description:
         "WebGL is disabled or not supported, so Hydra was not initialized",
     });
-  }, [hasWebGl]);
+  }, [session, hasWebGl]);
 
   useEffect(() => {
     if (!session) return;
@@ -186,21 +129,30 @@ export default function SessionPage() {
     store.set("username", username);
   }, [session, username]);
 
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "." && (e.metaKey || e.ctrlKey) && e.shiftKey) {
-        e.preventDefault();
-        documents.forEach((doc) => {
-          const panicCode = panicCodes[doc.target];
-          if (panicCode) doc.evaluate(panicCode, { from: 0, to: 0 });
-        });
-        toast({ title: "Panic!", duration: 1000 });
-      }
-    };
+  // Load external libraries
+  useStrudel(session, (err) => handleWebError("Strudel", err));
+  const { canvasRef: hydraCanvasRef } = useHydra(
+    session,
+    (err) => handleWebError("Hydra", err),
+    (msg) => handleWebWarning("Hydra", msg)
+  );
 
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
-  }, [documents]);
+  // Global shortcuts
+  useShortcut(["Control-J", "Meta-J"], () =>
+    setCommandsDialogOpen((open) => !open)
+  );
+  useShortcut(["Control-P"], () => setConfigureDialogOpen((open) => !open));
+  useShortcut(
+    ["Control-Shift-.", "Meta-Shift-."],
+    () => {
+      documents.forEach((doc) => {
+        const panicCode = panicCodes[doc.target];
+        if (panicCode) doc.evaluate(panicCode, { from: null, to: null });
+      });
+      toast({ title: "Panic!", duration: 1000 });
+    },
+    [documents]
+  );
 
   const replTargets = useMemo(
     () =>
@@ -210,13 +162,17 @@ export default function SessionPage() {
     [documents]
   );
 
+  const targetsList = useMemo(
+    () => documents.map((doc) => doc.target),
+    [documents]
+  );
+
   const handleViewLayoutAdd = useCallback(() => {
     if (!session) return;
     const newDocs = [
       ...documents.map((doc) => ({ id: doc.id, target: doc.target })),
       { id: String(documents.length + 1), target: defaultTarget },
     ];
-    console.log("newDocs", newDocs);
     session.setActiveDocuments(newDocs);
   }, [session, documents]);
 
@@ -233,12 +189,34 @@ export default function SessionPage() {
     document.target = newTarget;
   };
 
-  const handleHydraError = (error: string) => {
+  const handleEvaluateButtonClick = (document: Document) => {
+    document.evaluate(document.content, { from: null, to: null });
+  };
+
+  const handleConfigureAccept = (targets: string[]) => {
+    if (!session) return;
+    session.setActiveDocuments(
+      targets
+        .filter((t) => t)
+        .map((target, i) => ({ id: String(i + 1), target }))
+    );
+  };
+
+  const handleWebError = (title: string, error: unknown) => {
     if (!error) return;
     toast({
       variant: "destructive",
-      title: "Hydra error",
-      description: <pre className="whitespace-pre-wrap">{error}</pre>,
+      title,
+      description: <pre className="whitespace-pre-wrap">{String(error)}</pre>,
+    });
+  };
+
+  const handleWebWarning = (title: string, msg: string) => {
+    if (!msg) return;
+    toast({
+      variant: "warning",
+      title,
+      description: msg,
     });
   };
 
@@ -262,10 +240,16 @@ export default function SessionPage() {
         onAccept={(name) => setUsername(name)}
         onOpenChange={(isOpen) => setUsernameDialogOpen(isOpen)}
       />
-      <ConfigureDialog
-        open={configureDialogOpen}
-        onOpenChange={(isOpen) => setConfigureDialogOpen(isOpen)}
-      />
+      {session && (
+        <ConfigureDialog
+          targets={targetsList}
+          sessionUrl={session.wsUrl}
+          sessionName={session.name}
+          open={configureDialogOpen}
+          onOpenChange={(isOpen) => setConfigureDialogOpen(isOpen)}
+          onAccept={handleConfigureAccept}
+        />
+      )}
       {session && replTargets.length > 0 && (
         <ReplsDialog
           targets={replTargets}
@@ -289,17 +273,13 @@ export default function SessionPage() {
       )}
         <Mosaic
         items={documents.map((doc, i) => (
-          <Pane key={doc.id}>
-            <TargetSelect
-              triggerProps={{
-                className:
-                  "w-auto h-6 border-none focus:ring-0 focus:ring-offset-0 p-1 bg-slate-900 bg-opacity-50",
-              }}
-              value={doc.target}
-              onValueChange={(t) => handleTargetSelectChange(doc, t)}
-            />
-            <Editor document={doc} autoFocus={i === 0} className="flex-grow" />
-          </Pane>
+          <Pane
+            key={doc.id}
+            document={doc}
+            autoFocus={i == 0}
+            onTargetChange={handleTargetSelectChange}
+            onEvaluateButtonClick={handleEvaluateButtonClick}
+          />
         ))}
       />
       {hasWebGl && hydraCanvasRef && (

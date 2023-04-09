@@ -12,11 +12,13 @@ import "./style.css";
 const flokBasicSetup = (doc) => {
   const text = doc.getText();
   const undoManager = new UndoManager(text);
+  // if target is hydra, use "web" mode to evaluate on browser only, not REPLs
+  const web = doc.target === "hydra"
 
   return [
     flashField(),
     remoteEvalFlash(doc),
-    Prec.high(evalKeymap(doc)),
+    Prec.high(evalKeymap(doc, { web })),
     yCollab(text, doc.session.awareness, { undoManager }),
   ];
 };
@@ -40,6 +42,7 @@ const createEditor = doc => {
   });
 
   const targetEl = document.querySelector(`#${doc.id} .target`);
+  targetEl.value = doc.target;
 
   targetEl.addEventListener("change", (e) => {
     doc.target = e.target.value;
@@ -57,19 +60,25 @@ const handleMessage = (msg) => {
 
 const handleEvalHydra = (msg) => {
   console.log("eval:hydra", msg);
+  // evaluate hydra code here...
 };
 
 const session = new Session("default", { port: 3000 });
 window.session = session
 
+session.on("change", (...args) => console.log("change", ...args));
 session.on("message", handleMessage);
-session.on("message-user", handleMessage);
 session.on("eval:hydra", handleEvalHydra);
 
-session.setActiveDocuments([
-  { id: "slot1", target: "tidal" },
-  { id: "slot2", target: "hydra" },
-])
+session.on("sync", () => {
+  // If session is empty, create two documents
+  if (session.getDocuments().length === 0) {
+    session.setActiveDocuments([
+      { id: "slot1", target: "tidal" },
+      { id: "slot2", target: "hydra" },
+    ])
+  }
 
-// Create two editors, one for each of the targets
-session.getDocuments().map(doc => createEditor(doc))
+  // Create editors for each document
+  session.getDocuments().map(doc => createEditor(doc))
+})

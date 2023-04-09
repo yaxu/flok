@@ -46,10 +46,16 @@ export interface EvalContext {
   to: number | null;
 }
 
+export type EvalMode =
+  | "default" // publish to :eval and :in topics (for REPL targets)
+  | "web" // emit eval events directly and publish to :eval topic (for Web targets)
+  | "webLocal"; // emit eval events directly, do not publish to :eval topic
+
 export interface EvalMessage extends EvalContext {
-  editorId: string;
+  docId: string;
   body: string;
   user: string;
+  mode: EvalMode;
 }
 
 export interface SessionOptions {
@@ -121,6 +127,7 @@ export class Session {
 
   setActiveDocuments(items: { id: string; target?: string }[]) {
     const targets = this._yTargets();
+    const oldTargets = Object.fromEntries(targets.entries());
 
     // Remove duplicates on items (duplicate ids) by creating an object/map
     const newTargets = Object.fromEntries(
@@ -131,11 +138,15 @@ export class Session {
     const newIds = Object.keys(newTargets);
     const oldIds = Array.from(targets.keys());
     const toDelete = oldIds.filter((id) => !newIds.includes(id));
-    const toAdd = newIds.filter((id) => !oldIds.includes(id));
+    const toAddOrUpdate = newIds.filter(
+      (id) => !oldIds.includes(id) || oldTargets[id] !== newTargets[id]
+    );
+    debug("toDelete", toDelete);
+    debug("toAddOrUpdate", toAddOrUpdate);
 
     this.yDoc.transact(() => {
       toDelete.forEach((id) => targets.delete(id));
-      toAdd.forEach((id) => targets.set(id, newTargets[id]));
+      toAddOrUpdate.forEach((id) => targets.set(id, newTargets[id]));
     });
   }
 
@@ -167,21 +178,33 @@ export class Session {
   }
 
   evaluate(
-    editorId: string,
+    docId: string,
     target: string,
     body: string,
-    context: EvalContext
+    context: EvalContext,
+    mode: EvalMode = "default"
   ) {
     const msg: EvalMessage = {
-      editorId,
+      docId,
       body,
       user: this.user,
+      mode,
       ...context,
     };
-    this._pubSubClient.publish(
-      `session:${this.name}:target:${target}:eval`,
-      msg
-    );
+
+    // If evaluating on browser, emit events directly
+    if (mode === "web" || mode === "webLocal") {
+      this._emitter.emit(`eval`, msg);
+      this._emitter.emit(`eval:${target}`, msg);
+    }
+
+    // If not evaluating locally, publish to :eval topic
+    if (mode !== "webLocal") {
+      this._pubSubClient.publish(
+        `session:${this.name}:target:${target}:eval`,
+        msg
+      );
+    }
   }
 
   on(eventName: SessionEvent, cb: (...args: any[]) => void) {
@@ -295,13 +318,24 @@ export class Session {
       `session:${this.name}:target:${target}:eval`,
       (args) => {
         debug(`session:${this.name}:target:${target}:eval`, args);
-        this._emitter.emit(`eval`, args);
-        this._emitter.emit(`eval:${target}`, args);
+
+        const { fromMe, message } = args;
+        const { mode } = message;
+
+        // If mode is web or webLocal, and message is from me, do not emit
+        // event because we already did it when calling .evaluate()
+        if ((mode === "web" || mode === "webLocal") && fromMe) return;
+
+        this._emitter.emit(`eval`, message);
+        this._emitter.emit(`eval:${target}`, message);
+
+        // If mode is web or webLocal, do not publish to :in topics (not a REPL target)
+        if (mode === "web" || mode === "webLocal") return;
 
         // Notify to flok-repls
         this._pubSubClient.publish(
           `session:${this.name}:target:${target}:in`,
-          args
+          message
         );
       }
     );

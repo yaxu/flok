@@ -4,6 +4,25 @@ import debugModule from "debug";
 
 const debug = debugModule("flok:pubsub:server");
 
+export type PublishServerMessage = {
+  type: "publish";
+  payload: {
+    topic: string;
+    message: object;
+    publisher: string;
+    fromMe: boolean;
+  };
+};
+
+export type IdServerMessage = {
+  type: "id";
+  payload: {
+    id: string;
+  };
+};
+
+export type ServerMessage = IdServerMessage | PublishServerMessage;
+
 export class PubSubServer {
   pingTimeout: number = 30000;
 
@@ -42,11 +61,13 @@ export class PubSubServer {
 
   protected _handleConnection(ws: WebSocket) {
     const id = uuidv1();
-    this._clients[id] = ws;
 
     debug(`[${id}] connection`);
 
+    this._clients[id] = ws;
     this._isAlive[id] = true;
+
+    this._sendClientId(id);
 
     ws.on("message", (rawData) => {
       const data = JSON.parse(rawData.toString());
@@ -56,7 +77,7 @@ export class PubSubServer {
       switch (type) {
         case "publish": {
           const { topic, msg } = payload;
-          this._publish(topic, msg);
+          this._publish(topic, msg, id);
           break;
         }
         case "subscribe": {
@@ -118,12 +139,28 @@ export class PubSubServer {
     }, this.pingTimeout);
   }
 
-  protected _publish(topic: string, msg: any) {
+  protected _sendClientId(id: string) {
+    const dataObj: IdServerMessage = {
+      type: "id",
+      payload: { id },
+    };
+    const data = JSON.stringify(dataObj);
+    this._clients[id].send(data, (err) => {
+      if (!err) return;
+      debug(`error sending id to client ${id}`, err);
+    });
+  }
+
+  protected _publish(topic: string, msg: object, publisher: string) {
     const subs = this._subscribers;
     if (!(topic in subs) || subs[topic].size === 0) return;
 
     subs[topic].forEach((id) => {
-      const data = JSON.stringify({ topic, payload: msg });
+      const dataObj: PublishServerMessage = {
+        type: "publish",
+        payload: { topic, message: msg, publisher, fromMe: id === publisher },
+      };
+      const data = JSON.stringify(dataObj);
       this._clients[id].send(data, (err) => {
         if (!err) return;
         debug(`error publishing to client ${id}`, err);
