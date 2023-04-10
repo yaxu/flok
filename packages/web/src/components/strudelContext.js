@@ -1,4 +1,5 @@
 import("@strudel.cycles/core");
+import OSC from 'osc-js';
 
 var parts = ["waist", "back", "head"];
 
@@ -13,6 +14,7 @@ var { action, to, part, by, dur, waist, back, head } = createParams(
   "head"
 );
 
+window.OSC = OSC
 window.action = action;
 window.to = to;
 window.part = part;
@@ -112,6 +114,29 @@ window.patternMove = (pat) => inhabit(moves, pat);
 for (var key in window.moves) {
   window[key] = window.moves[key];
 }
+
+if (!('oscinit' in window)) {
+  const osc = new OSC()
+  osc.on('/cps', (message, rinfo) => {
+    setcps(message.args[0])
+  });
+  osc.on('/ctrl', (message, rinfo) => {
+    const args = message.args;
+    var name = args.shift();
+    var listname = '_' + name;
+    if (!(listname in window)) {
+      window[listname] = args;
+      window[name] = pure(window[listname]).fmap(fastcat).innerJoin()
+    }
+    else {
+      window[listname].splice(0, window[listname].length, ...args);
+    }
+  });
+
+  osc.open()
+  window.oscinit = 1;
+}
+
 
 export { }
 
