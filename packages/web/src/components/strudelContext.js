@@ -133,6 +133,17 @@ if (!('oscinit' in window)) {
     }
   });
 
+  osc.on('/move', (message, rinfo) => {
+    const args = message.args;
+    const name = args.shift();
+    const value = args.shift();
+    const dur = args.shift();
+    
+    if ('draw_incoming' in window) {
+      window.draw_incoming['name'].push({value: value, dur: dur});
+    }
+  });
+
   osc.open()
   window.oscinit = 1;
 }

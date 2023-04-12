@@ -9,11 +9,18 @@ const Draw = (props) => {
   const { session, name } = props;
   const ydoc = session.yDoc;
   const yarray = ydoc.getArray(name);
+  let incoming_pos = 0;
+  let incoming_value = 0;
   const setup = (p5, parent) => {
     p5.frameRate(25);
     if (!window.drawings) {
       window.drawings = {};
     }
+    if (! ('draw_incoming' in window)) {
+      window.draw_incoming = {};
+    }
+    window.draw_incoming[name] = []
+    
     const ps = [];
     globals[props.name] = { prev: -1, ps: ps, changed: true };
     window[props.name] = pure(ps).fmap(sequence).innerJoin().mul(2).sub(1);
@@ -31,6 +38,7 @@ const Draw = (props) => {
   };
 
   const draw = (p5) => {
+    incoming(p5);
     if (!globals[props.name].changed) {
       return;
     }
@@ -127,6 +135,35 @@ const Draw = (props) => {
     updateGlobal();
   };
 
+  const incoming = (p5) => {
+    const queue = window.draw_incoming[name];
+    let update = 0;
+    while (queue.length > 0) {
+      let {value,dur} = queue.shift();
+      if (value > 1) {
+        value = 1
+      }
+      else if (value < 0) {
+        value = 0;
+      }
+      const start = Math.floor(incoming_pos * p5.width);
+      const n = Math.floor(dur * p5.width);
+      const increase = value - incoming_value;
+      for (let i = 0; i < n; ++i) {
+        const pos = start+i;
+        yarray.delete(pos % p5.width);
+        yarray.insert(pos % p5.width, [incoming_value + (increase*(i/n))]);
+      }
+      
+      incoming_pos = (incoming_pos + dur) % 1;
+      incoming_value = value;
+      update = 1;
+    }
+    if (update) {
+      updateGlobal();
+    }
+  }
+  
   return (
     <Sketch
       setup={setup}
