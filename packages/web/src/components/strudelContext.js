@@ -3,7 +3,7 @@ import OSC from 'osc-js';
 
 var parts = ["waist", "back", "head"];
 
-var { action, to, part, by, dur, waist, back, head } = createParams(
+var { action, to, part, by, dur, waist, back, head, xpan } = createParams(
   "action",
   "to",
   "part",
@@ -11,7 +11,8 @@ var { action, to, part, by, dur, waist, back, head } = createParams(
   "dur",
   "waist",
   "back",
-  "head"
+    "head",
+    "xpan"
 );
 
 window.OSC = OSC
@@ -62,7 +63,7 @@ Pattern.prototype.splitUnipolarBodyParts = function () {
   const pats = [];
   for (const prt of parts) {
     pats.push(
-      pat.fmap((x) => ({ action: "move", part: prt, to: (x[prt] + 1) / 2 }))
+	pat.fmap((x) => ({ action: "move", part: prt, xpan: (x['xpan'] || 0.5), to: (x[prt] + 1) / 2 }))
     );
   }
   return stack(...pats);
@@ -85,7 +86,7 @@ window.inhabit = function (lookup, pat) {
 window.sum = (...pats) =>
   pats.reduce((a, b) => a.add(b), steady({ waist: 0, back: 0, head: 0 }));
 
-Pattern.prototype.splitSerial = function (velocity = 100) {
+Pattern.prototype.robots = function (velocity = 100) {
   return this.splitUnipolarBodyParts()
     .segment(32)
     .stack(action("velocity").to(velocity))
@@ -104,7 +105,7 @@ window.moves = {
   nod: move(0, -0.25, 0, fastcat(tri, saw).fast(3)),
   diagonaltwist: move(1, 1, 1, sine2),
   diagonal: move(saw, isaw, 0, sine2),
-  //draw: move(0, 1, 1, kate),
+  draw: move(0, 1, 1, silence),
   doubletake: move(0, 0, 0.5, fastcat(saw, sine2).slow(2)),
   // draw: move(0, 0, 1, kate),
 };
@@ -117,10 +118,12 @@ for (var key in window.moves) {
 
 if (!('oscinit' in window)) {
   const osc = new OSC()
-  osc.on('/cps', (message, rinfo) => {
+    osc.on('/cps', (message, rinfo) => {
+	console.log("set cps");
+	console.log(message);
     setcps(message.args[0])
   });
-  osc.on('/ctrl', (message, rinfo) => {
+    osc.on('/ctrl', (message, rinfo) => {
     const args = message.args;
     var name = args.shift();
     var listname = '_' + name;
@@ -140,7 +143,7 @@ if (!('oscinit' in window)) {
     const dur = args.shift();
     
     if ('draw_incoming' in window) {
-      window.draw_incoming['name'].push({value: value, dur: dur});
+      window.draw_incoming[name].push({value: value, dur: dur});
     }
   });
 

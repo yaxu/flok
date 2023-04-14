@@ -147,7 +147,7 @@ const Draw = (props) => {
         value = 0;
       }
       const start = Math.floor(incoming_pos * p5.width);
-      const n = Math.floor(dur * p5.width);
+      const n = Math.floor(dur * p5.width) + 1;
       const increase = value - incoming_value;
       for (let i = 0; i < n; ++i) {
         const pos = start+i;
