@@ -259,18 +259,6 @@ export default function SessionPage() {
           onOpenChange={(isOpen) => setReplsDialogOpen(isOpen)}
         />
       )}
-      {session && (
-            <div className="sketches">
-              <div className="sketch">
-                <Draw name="kate" session={session} />
-                kate
-              </div>
-              <div className="sketch">
-                <Draw name="alex" session={session} />
-                alex
-              </div>
-              </div>
-      )}
         <Mosaic
         items={documents.map((doc, i) => (
           <Pane
