@@ -6,6 +6,9 @@ import SessionClient, { IceServerType } from "../lib/SessionClient";
 import Mosaic from "./Mosaic";
 import Audio from "./Audio";
 
+import dynamic from "next/dynamic";
+const Draw = dynamic(() => import("./MySketch"), { ssr: false });
+
 const MAX_LINES: number = 100;
 
 type Props = {
@@ -305,6 +308,16 @@ class Session extends Component<Props, State> {
     return (
       // eslint-disable-next-line jsx-a11y/mouse-events-have-key-events
       <div className="container">
+            <div className="sketches">
+              <div className="sketch">
+                <Draw name="kate" sessionClient={sessionClient} />
+                kate
+              </div>
+              <div className="sketch">
+                <Draw name="alex" sessionClient={sessionClient} />
+                alex
+              </div>
+            </div>
         {showTextEditors && (
           <Mosaic
             layout={layout}

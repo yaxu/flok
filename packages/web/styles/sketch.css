@@ -1,0 +1,8 @@
+.sketches {
+  display: flex;
+  flex-direction: row;
+}
+
+.sketch {
+  margin: 10px;
+}

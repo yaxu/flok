@@ -9,15 +9,16 @@ import Layout from "../../components/Layout";
 import Container from "../../components/Container";
 import Session from "../../components/Session";
 import { IceServerType } from "../../lib/SessionClient";
-import HydraWrapper from "../../lib/HydraWrapper";
+//import HydraWrapper from "../../lib/HydraWrapper";
 import HydraCanvas from "../../components/HydraCanvas";
 import HydraError from "../../components/HydraError";
 import TextInput from "../../components/TextInput";
 import Button from "../../components/Button";
 import Checkbox from "../../components/Checkbox";
 import { webTargets } from "flok-core";
+import p5Types from "p5";
 
-const defaultLayoutList = ["tidal", "hydra"];
+const defaultLayoutList = ["strudel", "strudel"];
 
 const { publicRuntimeConfig } = getConfig();
 const {
@@ -286,15 +287,13 @@ interface State {
 }
 
 class SessionPage extends Component<Props, State> {
-  hydraCanvas: React.RefObject<HTMLCanvasElement>;
-  hydra: HydraWrapper;
   strudel: any;
 
   state = {
     loading: true,
     lastUsername: null,
     hasWebGl: true,
-    hydraEnabled: true,
+    hydraEnabled: false,
     hydraError: "",
     audioStreamingEnabled: false,
     username: null,
@@ -325,9 +324,6 @@ class SessionPage extends Component<Props, State> {
       ...this.state,
       hasWebGl: hasWebgl(),
     };
-
-    this.hydraCanvas = React.createRef();
-    this.hydra = null;
   }
 
   async componentDidMount() {
@@ -342,22 +338,11 @@ class SessionPage extends Component<Props, State> {
     // Initialize Strudel
     if (layoutList.includes("strudel")) {
       console.log("Create StrudelWrapper and import Strudel");
-      const { default: StrudelWrapper } = await import("../../lib/StrudelWrapper")
+      const { default: StrudelWrapper } = await import(
+        "../../lib/StrudelWrapper"
+      );
       this.strudel = new StrudelWrapper(this.handleHydraError);
       await this.strudel.importModules();
-    }
-
-    // Initialize Hydra
-    if (!noHydra && layoutList.includes("hydra")) {
-      if (hasWebGl) {
-        console.log("Create HydraWrapper");
-        this.hydra = new HydraWrapper(this.handleHydraError);
-        await this.hydra.initialize(this.hydraCanvas.current);
-      } else {
-        console.warn(
-          "WebGL is disabled or not supported in this browser, so Hydra was not initialized."
-        );
-      }
     }
 
     // Set Websockets URL
@@ -394,13 +379,6 @@ class SessionPage extends Component<Props, State> {
 
   handleLocalEvaluation = async (target: string, body: string) => {
     switch (target) {
-      case "hydra":
-        if (this.props.noHydra) return;
-        const { hydraEnabled, hasWebGl } = this.state;
-        if (hasWebGl && hydraEnabled) {
-          this.hydra.tryEval(body);
-        }
-        break;
       case "strudel":
         console.log(`Evaluate strudel code: ${body}`);
         await this.strudel.tryEval(body);
@@ -446,42 +424,44 @@ class SessionPage extends Component<Props, State> {
     const hasHydraSlot = !noHydra && layoutList.includes("hydra");
     const layout = this.generateLayoutFromList(layoutList);
 
+    let x = 10;
+    let y = 10;
+
     return (
       <Layout backgroundOpacity={backgroundOpacity}>
         <Head>
-          <title>Flok</title>
+          <title>Flok hmm</title>
         </Head>
         {loading ? (
           <LoadingSpinner />
         ) : username || readonly ? (
-          <Session
-            websocketsHost={host || location.host}
-            sessionName={session}
-            userName={username}
-            extraIceServers={extraIceServers}
-            layout={layout}
-            audioStreamingEnabled={audioStreamingEnabled}
-            onLocalEvaluation={this.handleLocalEvaluation}
-            readonly={readonly}
-            noLocalEval={noLocalEval}
-          />
-        ) : (
-          <EmptySession
-            websocketsUrl={websocketsUrl}
-            session={session}
-            lastUsername={lastUsername}
-            onSubmit={this.handleJoinSubmit}
-            hasHydraSlot={hasHydraSlot}
-            hasWebGl={hasWebGl}
-            layout={layoutList}
-          />
-        )}
-        {hasWebgl && !noHydra && (
           <>
-            <HydraCanvas ref={this.hydraCanvas} fullscreen />
-            {hydraError && <HydraError>{hydraError}</HydraError>}
+            <Session
+              websocketsHost={host || location.host}
+              sessionName={session}
+              userName={username}
+              extraIceServers={extraIceServers}
+              layout={layout}
+              audioStreamingEnabled={audioStreamingEnabled}
+              onLocalEvaluation={this.handleLocalEvaluation}
+              readonly={readonly}
+              noLocalEval={noLocalEval}
+            />
+          </>
+        ) : (
+          <>
+            <EmptySession
+              websocketsUrl={websocketsUrl}
+              session={session}
+              lastUsername={lastUsername}
+              onSubmit={this.handleJoinSubmit}
+              hasHydraSlot={hasHydraSlot}
+              hasWebGl={hasWebGl}
+              layout={layoutList}
+            />
           </>
         )}
+        {hasWebgl && !noHydra && <></>}
       </Layout>
     );
   }

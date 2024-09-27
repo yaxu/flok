@@ -33,6 +33,7 @@ class StrudelWrapper {
       import("@strudel.cycles/xen"),
       controls
     );
+    import("../components/strudelContext.js");
     await samples(
       "https://strudel.tidalcycles.org/EmuSP12.json",
       "https://strudel.tidalcycles.org/EmuSP12/"
